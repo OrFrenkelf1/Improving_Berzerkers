@@ -5,12 +5,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
-public struct Dice
+public interface IRandomProvider
 {
-    private uint _scalar;
+    public int Roll(uint min, uint max);
+
+    public int Bag(int min, int max);
+
+    public uint MaxValue { get; set; }
+}
+
+public struct Dice : IRandomProvider
+{
+    private uint _scalar; //means the amount of dice
     private uint _baseDie;
     private int _modifier;
+    public uint MaxValue { get => _baseDie; set => _baseDie = value; }
+
+    private List<int> listOfNumbers;
 
     //constructor
     public Dice(uint scalar, uint baseDie, int modifier)
@@ -18,15 +29,17 @@ public struct Dice
         _scalar = scalar;
         _baseDie = baseDie;
         _modifier = modifier;
+
+        listOfNumbers = new List<int>((int)_baseDie);
     }
 
-    public int Roll()
+    public int Roll(uint min, uint max)
     {
         int value = 0;
 
         for (int i = 0; i < _scalar; i++)
         {
-            value += Random.Shared.Next(1, (int)_baseDie+1) ;
+            value += Random.Shared.Next((int)min, (int)max + 1);
         }
 
         return value + _modifier;
@@ -45,5 +58,31 @@ public struct Dice
 
         return hash;
     }
+
+    public int Bag(int min, int max)
+    {
+        if (listOfNumbers.Count >= _baseDie)
+        {
+            listOfNumbers.Clear();
+            Console.WriteLine("Bag list was reset");
+        }
+        int value = 0;
+        int randomDieRoll = 0;
+
+        for (int i = 0; i < _scalar; i++)
+        {
+            randomDieRoll = Random.Shared.Next(min, max + 1);
+            Console.WriteLine("Rolled " + randomDieRoll);
+
+
+            Console.WriteLine("Added " + randomDieRoll);
+            listOfNumbers.Add(randomDieRoll);
+
+            value += randomDieRoll;
+        }
+
+        return value + _modifier;
+    }
+
 }
 

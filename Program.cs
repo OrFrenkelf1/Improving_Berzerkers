@@ -14,14 +14,14 @@ abstract class Unit
 {
     protected Race UnitRace { get; set; }
     protected Weather UnitWeatherEffect { get; set; }
-    public virtual Dice DamageDice { get; protected set; }
+    protected virtual IRandomProvider DamageDice { get; set; }
     virtual public int HP { get; protected set; }
     virtual public int CarryingCapacity { get; protected set; }
-    public virtual Dice HitChance { get; protected set; }
-    public virtual Dice DefenseRating { get; protected set; }
+    public virtual IRandomProvider HitChance { get; protected set; }
+    public virtual IRandomProvider DefenseRating { get; protected set; }
 
     //constructor
-    public Unit(Race myRace, Dice damage, int hp, int carryingCapacity, Dice hitChance, Dice defenseRating)
+    public Unit(Race myRace, IRandomProvider damage, int hp, int carryingCapacity, IRandomProvider hitChance, IRandomProvider defenseRating)
     {
         UnitRace = myRace;
         DamageDice = damage;
@@ -36,10 +36,11 @@ abstract class Unit
     {
         UnitWeatherEffect = recivedWeather;
     }
+
     public virtual void Attack(Unit unitToHit)
     {
-        int rollHitChance = HitChance.Roll();
-        int rollAttack = DamageDice.Roll();
+        int rollHitChance = HitChance.Roll(1, HitChance.MaxValue);
+        int rollAttack = DamageDice.Roll(1, HitChance.MaxValue);
 
         Console.WriteLine($"{UnitRace} Attacked {unitToHit.UnitRace} For {rollAttack} Damage");
 
@@ -52,7 +53,7 @@ abstract class Unit
 
         if (healChance <= 5)
         {
-            HP += 20;
+            HP += 1;
             Console.WriteLine($"{UnitRace} Healed for 20 HP");
         }
         else
@@ -63,7 +64,7 @@ abstract class Unit
     }
     public virtual void Defend(int hitChance, int damage)
     {
-        int defence = DefenseRating.Roll();
+        int defence = DefenseRating.Roll(20, 50);
 
         if (hitChance > defence) //damage don't hit if eaqule the defence rating
         {
@@ -82,11 +83,14 @@ abstract class Unit
 class Tank : Unit
 {
     //constructor
-    public Tank(Race myRace, Dice damage, int hp, int carryingCapacity, Dice hitChance, Dice defenseRating) : base(myRace, damage, hp, carryingCapacity, hitChance, defenseRating) { }
+    public Tank(Race myRace, IRandomProvider damage, int hp, int carryingCapacity, IRandomProvider hitChance, IRandomProvider defenseRating) : base(myRace, damage, hp, carryingCapacity, hitChance, defenseRating) { }
 
     public override void Attack(Unit unit)
     {
-        base.Attack(unit);
+        int rollHitChance = HitChance.Roll(1, 20);
+        int rollAttack = DamageDice.Bag(1, 6);
+
+        unit.Defend(rollHitChance, rollAttack);
     }
     public override void Defend(int hitChance, int damage)
     {
@@ -102,7 +106,7 @@ class Tank : Unit
 class Mind_Control : Unit
 {
     // Constructor
-    public Mind_Control(Race myRace, Dice damage, int hp, int carryingCapacity, Dice hitChance, Dice defenseRating) : base(myRace, damage, hp, carryingCapacity, hitChance, defenseRating) { }
+    public Mind_Control(Race myRace, IRandomProvider damage, int hp, int carryingCapacity, IRandomProvider hitChance, IRandomProvider defenseRating) : base(myRace, damage, hp, carryingCapacity, hitChance, defenseRating) { }
 
     public override void Attack(Unit unit)
     {
@@ -124,127 +128,131 @@ class Mind_Control : Unit
         Console.WriteLine($"{UnitRace} Healed for 30 HP");
     }
 
-    class FightSimulator
+
+}
+class FightSimulator
+{
+    public static void Fight(List<Unit> Player1, List<Unit> Player2)
     {
-        public static void Fight(List<Unit> Player1, List<Unit> Player2)
+        Dice weatherDice = new Dice(1, 6, 0);
+        int turns = 0;
+        while (Player1.Count > 0 && Player2.Count > 0)
         {
-            Dice weatherDice = new Dice(1, 6, 0);
-
-            while (Player1.Count > 0 && Player2.Count > 0)
+            turns++;
+            // Player1 attacks Player2
+            foreach (Unit attackerA in Player1)
             {
-                // Player1 attacks Player2
-                foreach (Unit attackerA in Player1)
+                // Are there's still Units in Player2 ?
+                if (Player2.Count > 0)
                 {
-                    // Are there's still Units in Player2 ?
-                    if (Player2.Count > 0)
-                    {
-                        // Select the first unit in Team B as the target
-                        Unit targetB = Player2[0];
+                    // Select the first unit in Team B as the target
+                    Unit targetB = Player2[0];
 
-                        // Attack Team B
-                        attackerA.Attack(targetB);
+                    // Attack Team B
+                    attackerA.Attack(targetB);
 
-                        // Remove the targets
-                        if (targetB.HP <= 0)
-                            Player2.Remove(targetB);
-                    }
-                    weatherDice = RollWeather(weatherDice, attackerA);
-
-                    attackerA.Heal();
+                    // Remove the targets
+                    if (targetB.HP <= 0)
+                        Player2.Remove(targetB);
                 }
+                weatherDice = RollWeather(weatherDice, attackerA);
 
-                foreach (var attackerB in Player2)
-                {
-                    if (Player1.Count > 0)
-                    {
-                        Unit targetA = Player1[0];
-
-                        attackerB.Attack(targetA);
-
-                        if (targetA.HP <= 0)
-                            Player1.Remove(targetA);
-                    }
-                    weatherDice = RollWeather(weatherDice, attackerB);
-
-                    attackerB.Heal();
-                }
-            }
-        }
-
-        private static Dice RollWeather(Dice weatherDice, Unit attackerA)
-        {
-            switch (weatherDice.Roll())
-            {
-                case 2:
-                    attackerA.SetWeatherEffect(Weather.Rainy);
-                    Console.WriteLine("It is now Rainy");
-                    break;
-                case 3:
-                    attackerA.SetWeatherEffect(Weather.Foggy);
-                    Console.WriteLine("It is now Foggy");
-                    break;
-                case 5:
-                    attackerA.SetWeatherEffect(Weather.Rainy);
-                    Console.WriteLine("It is now Rainy");
-                    break;
-                case 6:
-                    attackerA.SetWeatherEffect(Weather.Foggy);
-                    Console.WriteLine("It is now Foggy");
-                    break;
-                default:
-                    attackerA.SetWeatherEffect(Weather.Sunny);
-                    Console.WriteLine("It is now Sunny");
-                    break;
+                attackerA.Heal();
             }
 
-            return weatherDice;
+            foreach (var attackerB in Player2)
+            {
+                if (Player1.Count > 0)
+                {
+                    Unit targetA = Player1[0];
+
+                    attackerB.Attack(targetA);
+
+                    if (targetA.HP <= 0)
+                        Player1.Remove(targetA);
+                }
+                weatherDice = RollWeather(weatherDice, attackerB);
+
+                attackerB.Heal();
+            }
         }
+        Console.WriteLine(turns);
     }
-    class Program
+
+    private static Dice RollWeather(Dice weatherDice, Unit attackerA)
     {
-        static void Main()
+        switch (weatherDice.Roll(20, 50))
         {
-            Dice attackDice = new Dice(2, 20, 10);
-            Dice hitCHanceDice = new Dice(1, 20, 10);
-            Dice DeafendDice = new Dice(1, 6, 2);
+            case 2:
+                attackerA.SetWeatherEffect(Weather.Rainy);
+                Console.WriteLine("It is now Rainy");
+                break;
+            case 3:
+                attackerA.SetWeatherEffect(Weather.Foggy);
+                Console.WriteLine("It is now Foggy");
+                break;
+            case 5:
+                attackerA.SetWeatherEffect(Weather.Rainy);
+                Console.WriteLine("It is now Rainy");
+                break;
+            case 6:
+                attackerA.SetWeatherEffect(Weather.Foggy);
+                Console.WriteLine("It is now Foggy");
+                break;
+            default:
+                attackerA.SetWeatherEffect(Weather.Sunny);
+                Console.WriteLine("It is now Sunny");
+                break;
+        }
 
-            List<Unit> player1Team = new List<Unit>
+        return weatherDice;
+    }
+}
+class Program
+{
+    static void Main()
+    {
+        Dice attackDice = new Dice(2, 20, 10);
+        Dice hitCHanceDice = new Dice(1, 20, 10);
+        Dice defendDice = new Dice(1, 6, 2);
+
+
+        List<Unit> player1Team = new List<Unit>
+        {
+            new Tank(Race.Human, attackDice, 100, 50, hitCHanceDice, defendDice),
+            new Tank(Race.Human, attackDice, 70, 50, hitCHanceDice, defendDice),
+            new Tank(Race.Human, attackDice, 40, 50, hitCHanceDice, defendDice),
+            new Tank(Race.Animal, attackDice, 60, 50, hitCHanceDice, defendDice),
+            new Tank(Race.Animal, attackDice, 80, 50, hitCHanceDice, defendDice),
+        };
+
+        List<Unit> player2Team = new List<Unit>
+        {
+            new Mind_Control(Race.Animal, attackDice, 50, 50, hitCHanceDice, defendDice),
+            new Mind_Control(Race.God, attackDice, 100, 50, hitCHanceDice, defendDice),
+            new Mind_Control(Race.God, attackDice, 100, 50, hitCHanceDice, defendDice),
+            new Mind_Control(Race.God, attackDice, 100, 50, hitCHanceDice, defendDice),
+        };
+
+        FightSimulator.Fight(player1Team, player2Team);
+
+        // The Winner
+        int resources = 0;
+        if (player1Team.Count > 0)
+        {
+            foreach (Unit unit in player1Team)
             {
-            new Tank(Race.Human, attackDice, 100, 50, hitCHanceDice, DeafendDice),
-            new Tank(Race.Human, attackDice, 70, 50, hitCHanceDice, DeafendDice),
-            new Tank(Race.Human, attackDice, 40, 50, hitCHanceDice, DeafendDice),
-            new Tank(Race.Animal, attackDice, 60, 50, hitCHanceDice, DeafendDice),
-            new Tank(Race.Animal, attackDice, 80, 50, hitCHanceDice, DeafendDice),
-            };
-
-            List<Unit> player2Team = new List<Unit>
-            {
-            new Mind_Control(Race.Animal, attackDice, 50, 50, hitCHanceDice, DeafendDice),
-            new Mind_Control(Race.God, attackDice, 100, 50, hitCHanceDice, DeafendDice),
-            new Mind_Control(Race.God, attackDice, 100, 50, hitCHanceDice, DeafendDice),
-            new Mind_Control(Race.God, attackDice, 100, 50, hitCHanceDice, DeafendDice),
-            };
-
-            FightSimulator.Fight(player1Team, player2Team);
-
-            // The Winner
-            int resources = 0;
-            if (player1Team.Count > 0)
-            {
-                foreach(Unit unit in player1Team)
-                {
-                    resources += unit.CarryingCapacity;
-                }
-                Console.WriteLine ($"Player 1 Wins! and got {resources} resources");
+                resources += unit.CarryingCapacity;
             }
-            else
+            Console.WriteLine($"Player 1 Wins! and got {resources} resources");
+        }
+        else
+        {
+            foreach (Unit unit in player2Team)
             {
-                foreach (Unit unit in player2Team)
-                {
-                    resources += unit.CarryingCapacity;
-                }
-                Console.WriteLine($"Player 2 Wins! and got {resources} resources");
+                resources += unit.CarryingCapacity;
             }
+            Console.WriteLine($"Player 2 Wins! and got {resources} resources");
         }
     }
 }
