@@ -17,8 +17,8 @@ abstract class Unit
     protected virtual IRandomProvider DamageDice { get; set; }
     virtual public int HP { get; protected set; }
     virtual public int CarryingCapacity { get; protected set; }
-    public virtual IRandomProvider HitChance { get; protected set; }
-    public virtual IRandomProvider DefenseRating { get; protected set; }
+    protected virtual IRandomProvider HitChance { get; set; }
+    protected virtual IRandomProvider DefenseRating { get; set; }
 
     //constructor
     public Unit(Race myRace, IRandomProvider damage, int hp, int carryingCapacity, IRandomProvider hitChance, IRandomProvider defenseRating)
@@ -139,19 +139,17 @@ class FightSimulator
         while (Player1.Count > 0 && Player2.Count > 0)
         {
             turns++;
-            // Player1 attacks Player2
+
             foreach (Unit attackerA in Player1)
             {
                 // Are there's still Units in Player2 ?
                 if (Player2.Count > 0)
                 {
-                    // Select the first unit in Team B as the target
+                    // First unit in Team B
                     Unit targetB = Player2[0];
 
-                    // Attack Team B
                     attackerA.Attack(targetB);
 
-                    // Remove the targets
                     if (targetB.HP <= 0)
                         Player2.Remove(targetB);
                 }
