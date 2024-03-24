@@ -2,21 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-public interface IRandomProvider
+public abstract class Dice<T> where T : IComparable<T>
 {
-    int Roll(uint min, uint max);
-    int Bag(int min, int max);
-    uint MaxValue { get; set; }
-}
-
-public class Dice<T> : IRandomProvider where T : IComparable<T>
-{
-    private uint _scalar; // means the amount of dice
-    private T _baseDie;
-    private T _modifier;
-    public uint MaxValue { get; set; }
-
-    private List<T> listOfNumbers;
+    protected uint _scalar; // means the amount of dice
+    protected T _baseDie;
+    protected T _modifier;
 
     // constructor
     public Dice(uint scalar, T baseDie, T modifier)
@@ -24,21 +14,9 @@ public class Dice<T> : IRandomProvider where T : IComparable<T>
         _scalar = scalar;
         _baseDie = baseDie;
         _modifier = modifier;
-
-        listOfNumbers = new List<T>((int)_scalar);
     }
 
-    public int Roll(uint min, uint max)
-    {
-        dynamic value = 0;
-
-        for (int i = 0; i < _scalar; i++)
-        {
-            value += (dynamic)Random.Shared.Next((int)min, (int)max + 1);
-        }
-
-        return value + (dynamic)_modifier;
-    }
+    public abstract T Roll();
 
     public override string ToString()
     {
@@ -54,28 +32,19 @@ public class Dice<T> : IRandomProvider where T : IComparable<T>
     {
         return base.GetHashCode();
     }
+}
+public class IntDice : Dice<int>
+{
+    public IntDice(uint scalar, int baseDie, int modifier) : base(scalar, baseDie, modifier) { }
 
-    public int Bag(int min, int max)
+    public override int Roll()
     {
-        if (listOfNumbers.Count >= _scalar)
-        {
-            listOfNumbers.Clear();
-            Console.WriteLine("Bag list was reset");
-        }
-        dynamic value = 0;
-        dynamic randomDieRoll = 0;
+        int value = 0;
 
         for (int i = 0; i < _scalar; i++)
         {
-            randomDieRoll = Random.Shared.Next(min, max + 1);
-            Console.WriteLine("Rolled " + randomDieRoll);
-
-            Console.WriteLine("Added " + randomDieRoll);
-            listOfNumbers.Add(randomDieRoll);
-
-            value += randomDieRoll;
+            value += Random.Shared.Next( 1 , _baseDie );
         }
-
-        return value + (dynamic)_modifier;
+        return value + (int)_modifier;
     }
 }
