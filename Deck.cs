@@ -62,17 +62,5 @@ namespace ImprovingBerzerkers
 
             return _cards[0];
         }
-
-        public uint MaxValue { get; set; }
-
-        public int Bag(int min, int max)
-        {
-            throw new NotImplementedException();
-        }
-
-        public int Roll(uint min, uint max)
-        {
-            throw new NotImplementedException();
-        }
     }
 }
